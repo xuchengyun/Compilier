@@ -17,9 +17,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
-import cop5556fa17.Scanner.LexicalException;
-import cop5556fa17.Scanner.State;
-
 public class Scanner {
 
 	@SuppressWarnings("serial")
@@ -45,12 +42,13 @@ public class Scanner {
 		KW_polar_a("polar_a")/* polar_a*/, KW_polar_r("polar_r")/* polar_r*/, KW_abs("abs")/* abs */, KW_sin("sin")/* sin*/, KW_cos("cos")/* cos */, 
 		KW_atan("atan")/* atan */, KW_log("log")/* log */, KW_image("image")/* image */, KW_int("int")/* int */, KW_float("float") /* float */, 
 		KW_boolean("boolean")/* boolean */, KW_filename("filename")/* filename */, KW_red("red") /* red */, KW_blue("blue") /* blue */, 
-		KW_green("green") /* green */, KW_alpha("alpha") /* alpha*/, KW_while("while") /* while */, KW_if("if") /* if */, OP_ASSIGN(":=")/* := */, 
+		KW_green("green") /* green */, KW_alpha("alpha") /* alpha*/, KW_while("while") /* while */, KW_if("if") /* if */, KW_sleep("sleep"), OP_ASSIGN(":=")/* := */, 
 		OP_EXCLAMATION("!")/* ! */, OP_QUESTION("?")/* ? */, OP_COLON(":")/* : */, OP_EQ("==")/* == */, OP_NEQ("!=")/* != */, 
 		OP_GE(">=")/* >= */, OP_LE("<=")/* <= */, OP_GT(">")/* > */, OP_LT("<")/* < */, OP_AND("&")/* & */, OP_OR("|")/* | */, 
 		OP_PLUS("+")/* +*/, OP_MINUS("-")/* - */, OP_TIMES("*")/* * */, OP_DIV("/")/* / */, OP_MOD("%")/* % */, OP_POWER("**")/* ** */, 
 		OP_AT("@")/* @ */, LPAREN("(")/*( */, RPAREN(")")/* ) */, LSQUARE("[")/* [ */, RSQUARE("]")/* ] */, LBRACE("{") /*{ */, 
 		RBRACE("}") /* } */, LPIXEL("<<") /* << */, RPIXEL(">>") /* >> */, SEMI(";")/* ; */, COMMA(",")/* , */, DOT(".") /* . */, EOF("");
+		
 		
 		final String value;
 		
@@ -61,11 +59,10 @@ public class Scanner {
 		public String getValue() {
 			return this.value;
 		}
-
-	    @Override
-	    public String toString() {
-	        return this.getValue();
-	    }
+	    
+		String getText() {
+			return value;
+		}
 	}
 	
 	
@@ -307,14 +304,45 @@ public class Scanner {
 	public static HashMap<String, Kind> keyword = new HashMap<String, Kind>();
     static {
         for(Kind k: Kind.values()){
-		    String str = k.toString();
-		    if(str.matches("^[a-zA-Z_]+$")){
-		    	keyword.put(str, k);
-		    }
+        	switch(k) {
+        		case KW_Z: {keyword.put(k.getText(), k);} break;
+        		case KW_default_width: {keyword.put(k.getText(), k);} break;
+        		case KW_default_height: {keyword.put(k.getText(), k);} break;
+        		case KW_show: {keyword.put(k.getText(), k);} break;
+        		case KW_write: {keyword.put(k.getText(), k);} break;
+        		case KW_to: {keyword.put(k.getText(), k);} break;
+        		case KW_input: {keyword.put(k.getText(), k);} break;
+        		case KW_from: {keyword.put(k.getText(), k);} break;
+        		case KW_cart_x: {keyword.put(k.getText(), k);} break;
+        		case KW_cart_y: {keyword.put(k.getText(), k);} break;
+        		case KW_polar_a: {keyword.put(k.getText(), k);} break;
+        		case KW_polar_r: {keyword.put(k.getText(), k);} break;
+        		case KW_abs: {keyword.put(k.getText(), k);} break;
+        		case KW_sin: {keyword.put(k.getText(), k);} break;
+        		case KW_cos: {keyword.put(k.getText(), k);} break;
+        		case KW_atan: {keyword.put(k.getText(), k);} break;
+        		case KW_log: {keyword.put(k.getText(), k);} break;
+        		case KW_image: {keyword.put(k.getText(), k);} break;
+        		case KW_int: {keyword.put(k.getText(), k);} break;
+        		case KW_float: {keyword.put(k.getText(), k);} break;
+        		case KW_filename: {keyword.put(k.getText(), k);} break;
+        		case KW_boolean: {keyword.put(k.getText(), k);} break;
+        		case KW_red: {keyword.put(k.getText(), k);} break;
+        		case KW_blue: {keyword.put(k.getText(), k);} break;
+        		case KW_green: {keyword.put(k.getText(), k);} break;
+        		case KW_alpha: {keyword.put(k.getText(), k);} break;
+        		case KW_while: {keyword.put(k.getText(), k);} break;
+        		case KW_if: {keyword.put(k.getText(), k);} break;
+        		case KW_width: {keyword.put(k.getText(), k);} break;
+        		case KW_height: {keyword.put(k.getText(), k);} break;
+        		case KW_sleep: {keyword.put(k.getText(), k);} break;
+        	}
 		}
     }
 
-	private enum State {START, AFTER_LT, AFTER_ST, AFTER_EXCL, AFTER_COLON, AFTER_EQ, AFTER_DOT, AFTER_AS, IN_DIGIT, IN_IDENTIFIER};  //TODO:  this is incomplete
+	private enum State {START, AFTER_LT, AFTER_GT, AFTER_EXCL, AFTER_COLON, AFTER_EQ, AFTER_DOT, 
+		AFTER_AS, IN_IDENTIFIER, AFTER_DIGIT, IN_FLOAT, AFTER_DIV, IN_COMMENT, AFTER_ZERO;  //TODO:  this is incomplete
+	}
 
 	 
 	 //TODO: Modify this to deal with the entire lexical specification
@@ -325,81 +353,245 @@ public class Scanner {
 		while (pos < chars.length) {
 			char ch = chars[pos];
 			switch(state) {
+			    // start
 				case START: {
 					startPos = pos;
 					switch (ch) {
-						case ' ': {}
+						case ' ': 
 						case '\n':
 						case '\r':
 						case '\t':
 						case '\f': {pos++;}break;
-						case EOFChar: {tokens.add(new Token(Kind.EOF, startPos, 0)); pos++;} break;
-						case ';': {tokens.add(new Token(Kind.SEMI, startPos, pos - startPos + 1)); pos++;} break;
-						case '(': {tokens.add(new Token(Kind.LPAREN, startPos, pos - startPos + 1)); pos++;} break;
-						case ')': {tokens.add(new Token(Kind.RPAREN, startPos, pos - startPos + 1)); pos++;} break;
-						case '[': {tokens.add(new Token(Kind.LSQUARE, startPos, pos - startPos + 1)); pos++;} break;
-						case ']': {tokens.add(new Token(Kind.RSQUARE, startPos, pos - startPos + 1)); pos++;} break;
-						case '{': {tokens.add(new Token(Kind.LBRACE, startPos, pos - startPos + 1)); pos++;} break;
-						case '}': {tokens.add(new Token(Kind.RBRACE, startPos, pos - startPos + 1)); pos++;} break;
-						case '?': {tokens.add(new Token(Kind.OP_QUESTION, startPos, pos - startPos + 1)); pos++;} break;
-						case '&': {tokens.add(new Token(Kind.OP_AND, startPos, pos - startPos + 1)); pos++;} break;
-						case '|': {tokens.add(new Token(Kind.OP_OR, startPos, pos - startPos + 1)); pos++;} break;
-						case '+': {tokens.add(new Token(Kind.OP_PLUS, startPos, pos - startPos + 1)); pos++;} break;
-						case '-': {tokens.add(new Token(Kind.OP_MINUS, startPos, pos - startPos + 1)); pos++;} break;
-						case '/': {tokens.add(new Token(Kind.OP_DIV, startPos, pos - startPos + 1)); pos++;} break;
-						case '@': {tokens.add(new Token(Kind.OP_AT, startPos, pos - startPos + 1)); pos++;} break;
+						case EOFChar: {tokens.add(new Token(Kind.EOF, pos, 0));	pos++;} break; // should terminate loop
+						case ';': {tokens.add(new Token(Kind.SEMI, startPos, 1)); pos++;} break;
+						case '(': {tokens.add(new Token(Kind.LPAREN, startPos, 1)); pos++;} break;
+						case ')': {tokens.add(new Token(Kind.RPAREN, startPos, 1)); pos++;} break;
+						case '[': {tokens.add(new Token(Kind.LSQUARE, startPos, 1)); pos++;} break;
+						case ']': {tokens.add(new Token(Kind.RSQUARE, startPos, 1)); pos++;} break;
+						case '{': {tokens.add(new Token(Kind.LBRACE, startPos, 1)); pos++;} break;
+						case '}': {tokens.add(new Token(Kind.RBRACE, startPos, 1)); pos++;} break;
+						case '?': {tokens.add(new Token(Kind.OP_QUESTION, startPos, 1)); pos++;} break;
+						case '&': {tokens.add(new Token(Kind.OP_AND, startPos, 1)); pos++;} break;
+						case '|': {tokens.add(new Token(Kind.OP_OR, startPos,1)); pos++;} break;
+						case '+': {tokens.add(new Token(Kind.OP_PLUS, startPos, 1)); pos++;} break;
+						case '-': {tokens.add(new Token(Kind.OP_MINUS, startPos, 1)); pos++;} break;
+						case '@': {tokens.add(new Token(Kind.OP_AT, startPos,1)); pos++;} break;
+						case ',': {tokens.add(new Token(Kind.COMMA, startPos,1)); pos++;} break;
+						case '%': {tokens.add(new Token(Kind.OP_MOD, startPos,1)); pos++;} break;
+
 						
 						case '<': {state = State.AFTER_LT; pos++;} break;
-						case '>': {state = State.AFTER_ST; pos++;} break;
+						case '>': {state = State.AFTER_GT; pos++;} break;
 						case '.': {state = State.AFTER_DOT; pos++;} break;
 						case '!': {state = State.AFTER_EXCL; pos++;} break;
 						case ':': {state = State.AFTER_COLON; pos++;} break;
 						case '=': {state = State.AFTER_EQ; pos++;} break;
 						case '*': {state = State.AFTER_AS; pos++;} break;
+						case '/': {state = State.AFTER_DIV; pos++;} break;
 						
 						default: {
-							if(Character.isDigit(ch)){
-								state = State.IN_DIGIT;
-								pos++;
+							if (Character.isDigit(ch)){
+								if (ch == '0') {
+									state = State.AFTER_ZERO;
+									pos++;
+								} else {
+									state = State.AFTER_DIGIT;
+									pos++;
+								}
 							}
 							else if(Character.isLetter(ch)){
 								state = State.IN_IDENTIFIER;
 								pos++;
 							}
-							else if(Character.isWhitespace(ch)){
-								pos++;
-							}
 							else{
-								throw new LexicalException("Invalid character " + ch + "at pos " + pos, pos);
+								throw new LexicalException("Invalid character '" + ch + "' at pos " + pos, pos);
 							}
-							error(pos, 0, 0, "undefined state");
 						}
 					}//switch ch
 				}
 				break; 
+				// identifier
 				case IN_IDENTIFIER: {
-//					if 
-				}
-				default: {
-					if(Character.isDigit(ch)){
-						state = State.IN_DIGIT;
-						pos ++;
+					if (!(Character.isLetter(ch) || Character.isDigit(ch) || ch == '_' || ch == '$') || pos == chars.length - 1) {
+						Token temp_token =new Token(Kind.IDENTIFIER, startPos, pos - startPos);
+						String tmp_s = temp_token.getText();
+						if (keyword.containsKey(tmp_s)) {
+	         	        	tokens.add(new Token(keyword.get(tmp_s), startPos, pos - startPos));
+	        	        	state = State.START;
+						} else if (tmp_s.equals("true") || tmp_s.equals("false")){
+							Token temp = new Token(Kind.BOOLEAN_LITERAL, startPos, pos - startPos);
+							try {
+								temp.booleanVal();
+								tokens.add(temp);
+								state = State.START;
+							} catch(Exception IllegalBooleanException) {
+			            		throw new LexicalException("Out of the range of BOOLEAN !", startPos);  
+							}
+						} else {
+							tokens.add(new Token(Kind.IDENTIFIER, startPos, pos - startPos));
+	                        state = State.START;
+						}
+					} else {
+						pos++;
 					}
-					else if(Character.isJavaIdentifierStart(ch)){
-						state = State.IN_IDENTIFIER;
-						pos ++;
+				} break;
+				// 0
+				case AFTER_ZERO: {
+					if (ch == '.') {
+						state = State.IN_FLOAT;
+						pos++;
+					} else {
+						tokens.add(new Token(Kind.INTEGER_LITERAL, startPos, 1));
+						state = State.START;
 					}
-					else if(Character.isWhitespace(ch)){
-						pos ++;
+				} break;
+				// digit
+				case AFTER_DIGIT: {
+					if (Character.isDigit(ch)){
+	                    pos++;
+	                } else if(ch == '.') {
+	                	state = State.IN_FLOAT;
+	                	pos++;
+	                } else {
+              	        Token temp = new Token(Kind.INTEGER_LITERAL, startPos, pos - startPos);
+	         	        try{
+	         	          temp.intVal();
+	                      tokens.add(temp);    
+	                      state = State.START;      
+		                } catch(Exception IllegalNumberException) {
+		            		throw new LexicalException("Out of the range of INTEGER !", startPos);  
+		                }
+	                }
+				} break;
+				// in float
+				case IN_FLOAT: {
+					if (Character.isDigit(ch)) {
+						pos++;
+					} else {
+						
+              	        Token temp = new Token(Kind.FLOAT_LITERAL, startPos, pos - startPos);
+              	        
+              	        try {
+              	        	float f = temp.floatVal();
+              	        	if (Float.isFinite(f)) {
+                  	        	tokens.add(temp);
+                  	        	state = State.START;
+              	        	} else {
+              	        		throw new LexicalException("Out of the range of FLOAT !", startPos);  
+              	        	}
+              	        } catch(Exception IllegalFloatException) {
+		            		throw new LexicalException("FLOAT type error!", startPos);  
+              	        }
 					}
-					else{
-						throw new LexicalException("Invalid character " + ch + "at pos " + pos, pos);
+				} break;
+				// after '<'
+				case AFTER_LT: {
+					if (ch == '<') {
+						tokens.add(new Token(Kind.LPIXEL, startPos, 2));
+						pos++;
+						state = State.START;
+					} else if (ch == '=') {
+						tokens.add(new Token(Kind.OP_LE, startPos, 2));
+						pos++;
+						state = State.START;
+					} else {
+						tokens.add(new Token(Kind.OP_LT, startPos, 1));
+						state = State.START;
 					}
-					error(pos, 0, 0, "undefined state");
-				}
+				} break;
+				// after '>'
+				case AFTER_GT: {
+					if (ch == '>') {
+						tokens.add(new Token(Kind.RPIXEL, startPos, 2));
+						state = State.START;
+						pos++;
+					} else if (ch == '=') {
+						tokens.add(new Token(Kind.OP_GE, startPos, 2));
+						pos++;
+						state = State.START;
+					} else {
+						tokens.add(new Token(Kind.OP_GT, startPos, 1));
+						state = State.START;
+					}
+				} break;
+				// after '!'
+				case AFTER_EXCL: {
+					if (ch == '=') {
+						tokens.add(new Token(Kind.OP_NEQ, startPos, 2));
+						pos++;
+						state = State.START;
+					} else {
+						tokens.add(new Token(Kind.OP_EXCLAMATION, startPos, 1));
+						state = State.START;
+					}
+				} break;
+				// after ':'
+				case AFTER_COLON: {
+					if (ch == '=') {
+						tokens.add(new Token(Kind.OP_ASSIGN, startPos, 2));
+						pos++;
+						state = State.START;
+					} else {
+						tokens.add(new Token(Kind.OP_COLON, startPos, 1));
+						state = State.START;
+					}
+				} break;
+				// after '='
+				case AFTER_EQ: {
+					if (ch == '=') {
+						tokens.add(new Token(Kind.OP_EQ, startPos, 2));
+						pos++;
+						state = State.START;
+					} else {
+	            		throw new LexicalException("illegal char", startPos);  
+					}
+				} break;
+				// after '.'
+				case AFTER_DOT: {
+					if (Character.isDigit(ch)) {
+						state = State.IN_FLOAT;
+						pos++;
+					} else {
+						state = State.START;
+						tokens.add(new Token(Kind.DOT, startPos, 1));
+					}
+				} break;
+				// after '*'
+				case AFTER_AS: {
+					if (ch == '*') {
+						tokens.add(new Token(Kind.OP_POWER, startPos, 2));
+						pos++;
+						state = State.START;
+					} else {
+						tokens.add(new Token(Kind.OP_TIMES, startPos, 1));
+						state = State.START;
+					} 
+				} break;
+				// after '/'
+				case AFTER_DIV: {
+					if (ch == '*') {
+						state = State.IN_COMMENT;
+						pos++;
+					} else {
+						tokens.add(new Token(Kind.OP_DIV, startPos, 1));
+						state = State.START;
+					}
+				} break;
+				// in comment
+				case IN_COMMENT: {
+					if (ch == 128 || (ch == '*' && chars[pos + 1] == 128)) {
+						throw new LexicalException("Unexpected end of comment", startPos);  
+					} else {
+						if (ch == '*'&& chars[pos + 1] =='/') {
+							pos += 2;
+							state = State.START;
+						} else {
+							pos ++;
+						}
+					}
+				} break;
 			}// switch state
 		} // while
-			
 		return this;
 	}
 
@@ -470,5 +662,4 @@ public class Scanner {
 		}
 		return sb.toString();
 	}
-
 }
